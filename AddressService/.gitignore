@@ -1,0 +1,100 @@
+# =====================================================================
+# AddressService - Spring Boot / Maven
+# =====================================================================
+
+# Build output
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Maven
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+dependency-reduced-pom.xml
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+buildNumber.properties
+
+# Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+atlassian-ide-plugin.xml
+
+# Eclipse / STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+bin/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/dist/
+/.nb-gradle/
+nbactions.xml
+nb-configuration.xml
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Local / embedded databases
+*.db
+*.mv.db
+*.trace.db
+
+# OS metadata
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Secrets / local overrides  (NEVER commit these)
+*.env
+.env
+.env.*
+application-local.properties
+application-local.yml
+application-local.yaml
+application-secret.properties
+application-secrets.properties
+application-secret.yml
+*-secret.properties
+*-secrets.properties
+*.p12
+*.jks
+*.keystore
+*.pem
+*.key
+
+# Spring Initializr generated docs
+HELP.md
