@@ -3,6 +3,7 @@ package com.employee.EmployeeService.controller;
 import com.employee.EmployeeService.model.EmployeeStatus;
 import com.employee.EmployeeService.model.dto.EmployeeRequestDTO;
 import com.employee.EmployeeService.model.dto.EmployeeResponseDTO;
+import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
 import com.employee.EmployeeService.service.EmployeeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/employee")
-public class employeeController {
+public class EmployeeController {
 
     @Autowired
     private EmployeeService employeeService;
@@ -90,5 +91,10 @@ public class employeeController {
     public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/with-address")
+    public ResponseEntity<EmployeeWithAddressDTO> getEmployeeWithAddress(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.getEmployeeWithAddress(id));
     }
 }

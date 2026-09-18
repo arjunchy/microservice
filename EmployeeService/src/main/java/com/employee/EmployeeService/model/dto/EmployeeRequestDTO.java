@@ -9,7 +9,7 @@ public record EmployeeRequestDTO(
         @NotBlank String empName,
         @NotBlank @Email String empEmail,
         @NotBlank String designation,
-        @NotBlank String department,
+        @NotBlank String empDepartment,
         @NotBlank String companyName,
         @NotNull EmployeeStatus status
 ) {}

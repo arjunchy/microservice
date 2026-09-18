@@ -3,7 +3,10 @@ package com.employee.EmployeeService.controller;
 import com.employee.EmployeeService.exception.EmailAlreadyExistsException;
 import com.employee.EmployeeService.exception.EmployeeNotFoundException;
 import com.employee.EmployeeService.model.EmployeeStatus;
+import com.employee.EmployeeService.model.dto.AddressDTO;
 import com.employee.EmployeeService.model.dto.EmployeeResponseDTO;
+import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
+import com.employee.EmployeeService.model.entity.AddressType;
 import com.employee.EmployeeService.service.EmployeeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,8 +39,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(employeeController.class)
-class employeeControllerTest {
+@WebMvcTest(EmployeeController.class)
+class EmployeeControllerTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
 
@@ -58,7 +61,7 @@ class employeeControllerTest {
                 "empName", "Alice Smith",
                 "empEmail", "alice@example.com",
                 "designation", "Software Engineer",
-                "department", "Engineering",
+                "empDepartment", "Engineering",
                 "companyName", "Acme Corp",
                 "status", "ACTIVE"
         ));
@@ -69,7 +72,7 @@ class employeeControllerTest {
         map.put("empName", "Alice Smith");
         map.put("empEmail", "alice@example.com");
         map.put("designation", "Software Engineer");
-        map.put("department", "Engineering");
+        map.put("empDepartment", "Engineering");
         map.put("companyName", "Acme Corp");
         map.put("status", "ACTIVE");
         map.put(key, value);
@@ -81,7 +84,7 @@ class employeeControllerTest {
         map.put("empName", "Alice Smith");
         map.put("empEmail", "alice@example.com");
         map.put("designation", "Software Engineer");
-        map.put("department", "Engineering");
+        map.put("empDepartment", "Engineering");
         map.put("companyName", "Acme Corp");
         map.put("status", "ACTIVE");
         map.remove(key);
@@ -107,7 +110,7 @@ class employeeControllerTest {
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.empName").value("Emp 1"))
                 .andExpect(jsonPath("$.empEmail").value("emp1@example.com"))
-                .andExpect(jsonPath("$.department").value("Engineering"))
+                .andExpect(jsonPath("$.empDepartment").value("Engineering"))
                 .andExpect(jsonPath("$.companyName").value("Acme Corp"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
@@ -124,11 +127,12 @@ class employeeControllerTest {
                         .content(validBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("alice@example.com"))
-                .andExpect(jsonPath("$.status").value("400 BAD_REQUEST"));
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"empName", "designation", "department", "companyName"})
+    @ValueSource(strings = {"empName", "designation", "empDepartment", "companyName"})
     void createEmployee_blankRequiredField_shouldReturn400(String field) throws Exception {
         mockMvc.perform(post("/employee")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -189,7 +193,8 @@ class employeeControllerTest {
         mockMvc.perform(get("/employee/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Employee not found"))
-                .andExpect(jsonPath("$.status").value("404 NOT_FOUND"));
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"));
     }
 
     @Test
@@ -377,7 +382,7 @@ class employeeControllerTest {
                         .content(validBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("taken@example.com"))
-                .andExpect(jsonPath("$.status").value("400 BAD_REQUEST"));
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
@@ -426,7 +431,42 @@ class employeeControllerTest {
 
         mockMvc.perform(patch("/employee/99/status").param("status", "ACTIVE"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value("404 NOT_FOUND"));
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    // ---------------- GET /employee/{id}/with-address ----------------
+
+    @Test
+    void getEmployeeWithAddress_existing_shouldReturn200WithAddresses() throws Exception {
+        EmployeeWithAddressDTO withAddress = new EmployeeWithAddressDTO(
+                1L, "Alice Smith", "alice@example.com", "Software Engineer",
+                "Engineering", "Acme Corp", EmployeeStatus.ACTIVE, NOW,
+                List.of(new AddressDTO(1L, 1L, "Bengaluru", "India", "560001",
+                        AddressType.PERMANENT, NOW)));
+        when(employeeService.getEmployeeWithAddress(1L)).thenReturn(withAddress);
+
+        mockMvc.perform(get("/employee/1/with-address"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.empDepartment").value("Engineering"))
+                .andExpect(jsonPath("$.addresses", hasSize(1)))
+                .andExpect(jsonPath("$.addresses[0].city").value("Bengaluru"))
+                .andExpect(jsonPath("$.addresses[0].addressType").value("PERMANENT"));
+    }
+
+    @Test
+    void getEmployeeWithAddress_noAddresses_shouldReturn200WithEmptyList() throws Exception {
+        EmployeeWithAddressDTO withAddress = new EmployeeWithAddressDTO(
+                1L, "Alice Smith", "alice@example.com", "Software Engineer",
+                "Engineering", "Acme Corp", EmployeeStatus.ACTIVE, NOW, List.of());
+        when(employeeService.getEmployeeWithAddress(1L)).thenReturn(withAddress);
+
+        mockMvc.perform(get("/employee/1/with-address"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.addresses", hasSize(0)));
+
+        verify(employeeService).getEmployeeWithAddress(1L);
     }
 
     // ---------------- DELETE /employee/{id} ----------------

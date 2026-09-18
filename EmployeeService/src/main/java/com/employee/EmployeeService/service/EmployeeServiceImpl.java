@@ -1,15 +1,17 @@
 package com.employee.EmployeeService.service;
 
+import com.employee.EmployeeService.client.AddressClient;
 import com.employee.EmployeeService.exception.EmailAlreadyExistsException;
 import com.employee.EmployeeService.exception.EmployeeNotFoundException;
 import com.employee.EmployeeService.model.EmployeeStatus;
+import com.employee.EmployeeService.model.dto.AddressDTO;
 import com.employee.EmployeeService.model.dto.EmployeeRequestDTO;
 import com.employee.EmployeeService.model.dto.EmployeeResponseDTO;
+import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
 import com.employee.EmployeeService.model.entity.Employee;
 import com.employee.EmployeeService.model.mapper.EmployeeMapper;
 import com.employee.EmployeeService.repository.EmployeeRepository;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,9 @@ public class EmployeeServiceImpl implements EmployeeService{
 
     @Autowired
     private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private AddressClient addressClient;
 
     @Autowired
     private EmployeeMapper employeeMapper;
@@ -111,5 +116,29 @@ public class EmployeeServiceImpl implements EmployeeService{
             throw new EmployeeNotFoundException("Employee not found");
         }
         employeeRepository.deleteById(id);
+    }
+
+    @Override
+    public EmployeeWithAddressDTO getEmployeeWithAddress(Long id) {
+        Employee emp = employeeRepository.findById(id).orElseThrow(() -> new EmployeeNotFoundException("Employee not found"));
+
+        List<AddressDTO> addresses;
+        try {
+            addresses = addressClient.getAddressesByEmployeeId(id);
+        } catch (Exception e) {
+            addresses = List.of();
+        }
+
+        return new EmployeeWithAddressDTO(
+                emp.getId(),
+                emp.getEmpName(),
+                emp.getEmpEmail(),
+                emp.getDesignation(),
+                emp.getEmpDepartment(),
+                emp.getCompanyName(),
+                emp.getStatus(),
+                emp.getCreatedAt(),
+                addresses
+        );
     }
 }

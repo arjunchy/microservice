@@ -33,8 +33,7 @@ public class AddressController {
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<AddressResponseDTO>> getAddressesByEmployeeId(
-            @PathVariable Long employeeId) {
+    public ResponseEntity<List<AddressResponseDTO>> getAddressesByEmployeeId(@PathVariable Long employeeId) {
         return ResponseEntity.ok(addressService.getAddressesByEmployeeId(employeeId));
     }
 

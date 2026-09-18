@@ -4,7 +4,7 @@ import com.employee.EmployeeService.model.EmployeeStatus;
 
 public record EmployeeUpdateDTO(
         String designation,
-        String department,
+        String empDepartment,
         String companyName,
         EmployeeStatus status
 ) {}

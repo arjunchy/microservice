@@ -1,10 +1,14 @@
 package com.employee.EmployeeService.service;
 
+import com.employee.EmployeeService.client.AddressClient;
 import com.employee.EmployeeService.exception.EmailAlreadyExistsException;
 import com.employee.EmployeeService.exception.EmployeeNotFoundException;
 import com.employee.EmployeeService.model.EmployeeStatus;
+import com.employee.EmployeeService.model.dto.AddressDTO;
 import com.employee.EmployeeService.model.dto.EmployeeRequestDTO;
 import com.employee.EmployeeService.model.dto.EmployeeResponseDTO;
+import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
+import com.employee.EmployeeService.model.entity.AddressType;
 import com.employee.EmployeeService.model.entity.Employee;
 import com.employee.EmployeeService.model.mapper.EmployeeMapper;
 import com.employee.EmployeeService.repository.EmployeeRepository;
@@ -21,6 +25,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,6 +46,9 @@ class EmployeeServiceImplTest {
 
     @Mock
     private EmployeeMapper employeeMapper;
+
+    @Mock
+    private AddressClient addressClient;
 
     @InjectMocks
     private EmployeeServiceImpl employeeService;
@@ -383,6 +391,52 @@ class EmployeeServiceImplTest {
                 .hasMessage("Employee not found");
 
         verify(employeeRepository, never()).saveAndFlush(any());
+    }
+
+    // ---------------- getEmployeeWithAddress ----------------
+
+    @Test
+    void getEmployeeWithAddress_whenFound_shouldReturnEmployeeWithAddresses() {
+        Employee emp = entity(1L);
+        List<AddressDTO> addresses = List.of(
+                new AddressDTO(1L, 1L, "Bengaluru", "India", "560001", AddressType.PERMANENT, NOW));
+
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(emp));
+        when(addressClient.getAddressesByEmployeeId(1L)).thenReturn(addresses);
+
+        EmployeeWithAddressDTO result = employeeService.getEmployeeWithAddress(1L);
+
+        assertThat(result.id()).isEqualTo(1L);
+        assertThat(result.empDepartment()).isEqualTo(DEPARTMENT);
+        assertThat(result.addresses()).hasSize(1);
+        assertThat(result.addresses().get(0).city()).isEqualTo("Bengaluru");
+        verify(addressClient).getAddressesByEmployeeId(1L);
+    }
+
+    @Test
+    void getEmployeeWithAddress_whenAddressServiceUnavailable_shouldReturnEmptyAddresses() {
+        Employee emp = entity(1L);
+
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(emp));
+        doThrow(new RuntimeException("address-service-down"))
+                .when(addressClient).getAddressesByEmployeeId(1L);
+
+        EmployeeWithAddressDTO result = employeeService.getEmployeeWithAddress(1L);
+
+        assertThat(result.id()).isEqualTo(1L);
+        assertThat(result.addresses()).isEmpty();
+        verify(addressClient).getAddressesByEmployeeId(1L);
+    }
+
+    @Test
+    void getEmployeeWithAddress_whenEmployeeNotFound_shouldThrow() {
+        when(employeeRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> employeeService.getEmployeeWithAddress(99L))
+                .isInstanceOf(EmployeeNotFoundException.class)
+                .hasMessage("Employee not found");
+
+        verify(addressClient, never()).getAddressesByEmployeeId(any());
     }
 
     // ---------------- deleteEmployee ----------------

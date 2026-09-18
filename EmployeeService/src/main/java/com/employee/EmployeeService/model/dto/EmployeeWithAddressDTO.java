@@ -3,8 +3,9 @@ package com.employee.EmployeeService.model.dto;
 import com.employee.EmployeeService.model.EmployeeStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-public record EmployeeResponseDTO(
+public record EmployeeWithAddressDTO(
         Long id,
         String empName,
         String empEmail,
@@ -13,5 +14,6 @@ public record EmployeeResponseDTO(
         String companyName,
         EmployeeStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        List<AddressDTO> addresses
 ) {}
+

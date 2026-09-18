@@ -58,7 +58,7 @@ class EmployeeMapperTest {
         assertThat(dto.empName()).isEqualTo("Alice Smith");
         assertThat(dto.empEmail()).isEqualTo("alice@example.com");
         assertThat(dto.designation()).isEqualTo("Software Engineer");
-        assertThat(dto.department()).isEqualTo("Engineering");
+        assertThat(dto.empDepartment()).isEqualTo("Engineering");
         assertThat(dto.companyName()).isEqualTo("Acme Corp");
         assertThat(dto.status()).isEqualTo(EmployeeStatus.ACTIVE);
         assertThat(dto.createdAt()).isEqualTo(NOW);
