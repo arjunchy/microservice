@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: employee-service-route
+              uri: lb://employee-service
+              predicates:
+                - Path=/employee/**
+              filters:
+                - AuthFilter
+            - id: address-service-route
+              uri: lb://address-service
+              predicates:
+                - Path=/addresses/**
+              filters:
+                - AuthFilter
+            - id: auth-service-route
+              uri: lb://auth-service
+              predicates:
+                - Path=/auth/**
+              filters:
+                - AuthFilter
+
+server:
+  port: 9090
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka
+
+jwt:
+  secret: a3f1b8d4c9e2f706b8a9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f
+  expiration: 86400000
+
+gateway:
+  public:
+    paths:
+      - /auth/register
+      - /auth/login
+      - /eureka/**
+      - /actuator/**

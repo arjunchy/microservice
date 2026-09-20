@@ -1,6 +1,7 @@
 # =====================================================================
 # microservices root .gitignore
-# Applies to all services: AddressService, EmployeeService, EurekaServer
+# Applies to all services: AddressService, EmployeeService, EurekaServer,
+# Auth, ApiGateway
 # =====================================================================
 
 # ---------------------------------------------------------------------
@@ -10,11 +11,7 @@ target/
 build/
 out/
 *.class
-*.jar
-*.war
-*.ear
-*.nar
-*.log
+bin/
 
 # Keep build dirs only if they somehow live inside src (Initializr default)
 !**/src/main/**/target/
@@ -23,10 +20,17 @@ out/
 !**/src/test/**/build/
 
 # ---------------------------------------------------------------------
+# Packaged artifacts
+# ---------------------------------------------------------------------
+*.jar
+*.war
+*.ear
+*.nar
+
+# ---------------------------------------------------------------------
 # Maven
 # ---------------------------------------------------------------------
 .mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
 dependency-reduced-pom.xml
 pom.xml.tag
 pom.xml.releaseBackup
@@ -45,12 +49,10 @@ buildNumber.properties
 # IntelliJ IDEA
 # ---------------------------------------------------------------------
 .idea/
+.idea_modules/
 *.iml
 *.iws
 *.ipr
-*.ipr
-out/
-.idea_modules/
 atlassian-ide-plugin.xml
 
 # ---------------------------------------------------------------------
@@ -63,7 +65,6 @@ atlassian-ide-plugin.xml
 .settings/
 .springBeans
 .sts4-cache
-bin/
 
 # ---------------------------------------------------------------------
 # NetBeans
@@ -86,6 +87,13 @@ nb-configuration.xml
 *.log
 logs/
 *.log.*
+
+# ---------------------------------------------------------------------
+# Heap dumps / profiler output
+# ---------------------------------------------------------------------
+*.hprof
+*.jfr
+profiles/
 
 # ---------------------------------------------------------------------
 # Local databases / H2
@@ -125,6 +133,15 @@ application-secret.yml
 *.keystore
 *.pem
 *.key
+*.crt
+*.cer
+
+# ---------------------------------------------------------------------
+# Patches / leftovers
+# ---------------------------------------------------------------------
+*.orig
+*.rej
+*~
 
 # ---------------------------------------------------------------------
 # Spring Initializr generated docs
