@@ -12,18 +12,70 @@ spring:
                 - Path=/employee/**
               filters:
                 - AuthFilter
+                - name: CircuitBreaker
+                  args:
+                    name: EMPLOYEE-SERVICE
+                    fallbackUri: forward:/employeeServiceFallback
+
             - id: address-service-route
               uri: lb://address-service
               predicates:
                 - Path=/addresses/**
               filters:
                 - AuthFilter
+                - name: CircuitBreaker
+                  args:
+                    name: ADDRESS-SERVICE
+                    fallbackUri: forward:/addressServiceFallback
+
             - id: auth-service-route
               uri: lb://auth-service
               predicates:
                 - Path=/auth/**
               filters:
                 - AuthFilter
+resilience4j:
+  timelimiter:
+    instances:
+      EMPLOYEE-SERVICE:
+        timeoutDuration: 5s
+      ADDRESS-SERVICE:
+        timeoutDuration: 5s
+  circuitbreaker:
+    instances:
+      EMPLOYEE-SERVICE:
+        registerHealthIndicator: true
+        eventConsumerBufferSize: 10
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 6s
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowType: COUNT_BASED
+
+      ADDRESS-SERVICE:
+        registerHealthIndicator: true
+        eventConsumerBufferSize: 10
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 6s
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowType: COUNT_BASED
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,circuitbreakers
+  health:
+    circuit breakers:
+      enabled: true
+  endpoint:
+    health:
+      show-details: always
 
 server:
   port: 9090
@@ -48,3 +100,4 @@ gateway:
       - /auth/login
       - /eureka/**
       - /actuator/**
+      - /demo/**
