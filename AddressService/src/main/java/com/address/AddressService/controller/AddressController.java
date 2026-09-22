@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class AddressController {
     @Autowired
     private AddressService addressService;
 
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PostMapping
     public ResponseEntity<AddressResponseDTO> createAddress(
             @Valid @RequestBody AddressRequestDTO dto) {
@@ -68,6 +70,7 @@ public class AddressController {
         return ResponseEntity.ok(addressService.existsById(id));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PutMapping("/{id}")
     public ResponseEntity<AddressResponseDTO> updateAddress(
             @PathVariable Long id,
@@ -75,12 +78,14 @@ public class AddressController {
         return ResponseEntity.ok(addressService.updateAddress(id, dto));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAddress(@PathVariable Long id) {
         addressService.deleteAddress(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/employee/{employeeId}")
     public ResponseEntity<Void> deleteAddressesByEmployeeId(
             @PathVariable Long employeeId) {

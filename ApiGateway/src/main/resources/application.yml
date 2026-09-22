@@ -71,7 +71,7 @@ management:
       exposure:
         include: health,info,metrics,circuitbreakers
   health:
-    circuit breakers:
+     circuit breakers:
       enabled: true
   endpoint:
     health:
