@@ -11,7 +11,9 @@ import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
 import com.employee.EmployeeService.model.entity.AddressType;
 import com.employee.EmployeeService.model.entity.Employee;
 import com.employee.EmployeeService.model.mapper.EmployeeMapper;
+import com.employee.EmployeeService.model.read.AddressReadEntity;
 import com.employee.EmployeeService.repository.EmployeeRepository;
+import com.employee.EmployeeService.service.AddressReadService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -49,6 +51,9 @@ class EmployeeServiceImplTest {
 
     @Mock
     private AddressClient addressClient;
+
+    @Mock
+    private AddressReadService addressReadService;
 
     @InjectMocks
     private EmployeeServiceImpl employeeService;
@@ -398,11 +403,17 @@ class EmployeeServiceImplTest {
     @Test
     void getEmployeeWithAddress_whenFound_shouldReturnEmployeeWithAddresses() {
         Employee emp = entity(1L);
-        List<AddressDTO> addresses = List.of(
-                new AddressDTO(1L, 1L, "Bengaluru", "India", "560001", AddressType.PERMANENT, NOW));
+        AddressReadEntity read = new AddressReadEntity();
+        read.setId(1L);
+        read.setEmployeeId(1L);
+        read.setCity("Bengaluru");
+        read.setCountry("India");
+        read.setZipCode("560001");
+        read.setAddressType(AddressType.PERMANENT);
+        read.setCreatedAt(NOW);
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(emp));
-        when(addressClient.getAddressesByEmployeeId(1L)).thenReturn(addresses);
+        when(addressReadService.findByEmployeeId(1L)).thenReturn(List.of(read));
 
         EmployeeWithAddressDTO result = employeeService.getEmployeeWithAddress(1L);
 
@@ -410,7 +421,7 @@ class EmployeeServiceImplTest {
         assertThat(result.empDepartment()).isEqualTo(DEPARTMENT);
         assertThat(result.addresses()).hasSize(1);
         assertThat(result.addresses().get(0).city()).isEqualTo("Bengaluru");
-        verify(addressClient).getAddressesByEmployeeId(1L);
+        verify(addressReadService).findByEmployeeId(1L);
     }
 
     @Test
@@ -418,14 +429,14 @@ class EmployeeServiceImplTest {
         Employee emp = entity(1L);
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(emp));
-        doThrow(new RuntimeException("address-service-down"))
-                .when(addressClient).getAddressesByEmployeeId(1L);
+        doThrow(new RuntimeException("address-db-down"))
+                .when(addressReadService).findByEmployeeId(1L);
 
         EmployeeWithAddressDTO result = employeeService.getEmployeeWithAddress(1L);
 
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.addresses()).isEmpty();
-        verify(addressClient).getAddressesByEmployeeId(1L);
+        verify(addressReadService).findByEmployeeId(1L);
     }
 
     @Test
@@ -436,6 +447,7 @@ class EmployeeServiceImplTest {
                 .isInstanceOf(EmployeeNotFoundException.class)
                 .hasMessage("Employee not found");
 
+        verify(addressReadService, never()).findByEmployeeId(any());
         verify(addressClient, never()).getAddressesByEmployeeId(any());
     }
 

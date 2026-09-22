@@ -10,15 +10,16 @@ import com.employee.EmployeeService.model.dto.EmployeeResponseDTO;
 import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
 import com.employee.EmployeeService.model.entity.Employee;
 import com.employee.EmployeeService.model.mapper.EmployeeMapper;
+import com.employee.EmployeeService.model.read.AddressReadEntity;
 import com.employee.EmployeeService.repository.EmployeeRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@Transactional
+@Transactional(transactionManager = "employeeTransactionManager")
 public class EmployeeServiceImpl implements EmployeeService{
 
     @Autowired
@@ -26,6 +27,9 @@ public class EmployeeServiceImpl implements EmployeeService{
 
     @Autowired
     private AddressClient addressClient;
+
+    @Autowired
+    private AddressReadService addressReadService;
 
     @Autowired
     private EmployeeMapper employeeMapper;
@@ -124,7 +128,17 @@ public class EmployeeServiceImpl implements EmployeeService{
 
         List<AddressDTO> addresses;
         try {
-            addresses = addressClient.getAddressesByEmployeeId(id);
+            List<AddressReadEntity> entities = addressReadService.findByEmployeeId(id);
+            addresses = entities.stream()
+                    .map(e -> new AddressDTO(
+                            e.getId(),
+                            e.getEmployeeId(),
+                            e.getCity(),
+                            e.getCountry(),
+                            e.getZipCode(),
+                            e.getAddressType(),
+                            e.getCreatedAt()))
+                    .toList();
         } catch (Exception e) {
             addresses = List.of();
         }
