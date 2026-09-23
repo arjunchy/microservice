@@ -1,0 +1,162 @@
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - microservices-net
+
+  eureka-server:
+    build: ./EurekaServer
+    image: eureka-server:1.0
+    container_name: eureka-server
+    restart: unless-stopped
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8761"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - microservices-net
+
+  employee-service:
+    build: ./EmployeeService
+    image: employee-service:1.0
+    container_name: employee-service
+    restart: unless-stopped
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      APP_DATASOURCE_EMPLOYEE_JDBC_URL: "jdbc:mysql://mysql:3306/employee_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      APP_DATASOURCE_EMPLOYEE_USERNAME: employee_user
+      APP_DATASOURCE_EMPLOYEE_PASSWORD: employee_pwd
+      APP_DATASOURCE_ADDRESS_JDBC_URL: "jdbc:mysql://mysql:3306/address_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      APP_DATASOURCE_ADDRESS_USERNAME: employee_address_ro
+      APP_DATASOURCE_ADDRESS_PASSWORD: employee_ro_pwd
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      address-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - microservices-net
+
+  address-service:
+    build: ./AddressService
+    image: address-service:1.0
+    container_name: address-service
+    restart: unless-stopped
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/address_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      ADDRESS_DB_USERNAME: address_user
+      ADDRESS_DB_PASSWORD: address_pwd
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8082"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - microservices-net
+
+  auth-service:
+    build: ./Auth
+    image: auth-service:1.0
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      AUTH_DB_USERNAME: auth_user
+      AUTH_DB_PASSWORD: auth_pwd
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8084:8084"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8084"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - microservices-net
+
+  api-gateway:
+    build: ./ApiGateway
+    image: api-gateway:1.0
+    container_name: api-gateway
+    restart: unless-stopped
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+    ports:
+      - "9090:9090"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      employee-service:
+        condition: service_healthy
+      address-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9090"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 70s
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  mysql-data:

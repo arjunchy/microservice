@@ -7,6 +7,7 @@ import com.employee.EmployeeService.model.dto.AddressDTO;
 import com.employee.EmployeeService.model.dto.EmployeeResponseDTO;
 import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
 import com.employee.EmployeeService.model.entity.AddressType;
+import com.employee.EmployeeService.security.JwtService;
 import com.employee.EmployeeService.service.EmployeeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -40,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(EmployeeController.class)
+@WithMockUser(roles = "ADMIN")
 class EmployeeControllerTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
@@ -52,6 +55,9 @@ class EmployeeControllerTest {
 
     @MockitoBean
     private EmployeeService employeeService;
+
+    @MockitoBean
+    private JwtService jwtService;
 
     private String validBody;
 

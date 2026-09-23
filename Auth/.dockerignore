@@ -1,0 +1,9 @@
+target/
+!target/*.jar
+.git/
+.idea/
+*.iml
+*.log
+.gitignore
+HELP.md
+TESTCASES.md
