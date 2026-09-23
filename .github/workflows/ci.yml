@@ -72,15 +72,15 @@ jobs:
       matrix:
         include:
           - service: EurekaServer
-            image: eurekaserver
+            image: eureka-server
           - service: EmployeeService
-            image: employeeservice
+            image: employee-service
           - service: AddressService
-            image: addressservice
+            image: address-service
           - service: Auth
-            image: auth
+            image: auth-service
           - service: ApiGateway
-            image: apigateway
+            image: api-gateway
 
     steps:
       - name: Checkout code
