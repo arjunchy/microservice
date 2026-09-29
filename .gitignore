@@ -144,6 +144,21 @@ application-secret.yml
 *~
 
 # ---------------------------------------------------------------------
+# Docker / container local artefacts
+# ---------------------------------------------------------------------
+docker-compose.override.yml
+docker-compose.override.yaml
+*.dockerfile.local
+.docker/tmp/
+
+# ---------------------------------------------------------------------
+# Kubernetes local kubeconfigs (real kubeconfig lives outside repo)
+# ---------------------------------------------------------------------
+kubeconfig
+kubeconfig-*
+.kube/
+
+# ---------------------------------------------------------------------
 # Spring Initializr generated docs
 # ---------------------------------------------------------------------
 HELP.md

@@ -1,5 +1,6 @@
 package com.employee.EmployeeService.controller;
 
+import com.employee.EmployeeService.exception.AddressServiceUnavailableException;
 import com.employee.EmployeeService.exception.EmailAlreadyExistsException;
 import com.employee.EmployeeService.exception.EmployeeNotFoundException;
 import com.employee.EmployeeService.model.dto.EmployeeRequestDTO;
@@ -181,7 +182,8 @@ class EmployeeControllerExceptionTest {
 
     @Test
     void getAllEmployees_unexpectedException_returns500() throws Exception {
-        when(employeeService.getAllEmployees()).thenThrow(new RuntimeException("boom"));
+        when(employeeService.getAllEmployees(any(org.springframework.data.domain.Pageable.class)))
+                .thenThrow(new RuntimeException("boom"));
 
         mockMvc.perform(get("/employee"))
                 .andExpect(status().isInternalServerError())
@@ -360,6 +362,18 @@ class EmployeeControllerExceptionTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("Employee not found"));
+    }
+
+    @Test
+    void getEmployeeWithAddress_addressServiceUnavailable_returns503() throws Exception {
+        when(employeeService.getEmployeeWithAddress(anyLong()))
+                .thenThrow(new AddressServiceUnavailableException("Address service unavailable"));
+
+        mockMvc.perform(get("/employee/1/with-address"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.error").value("Service Unavailable"))
+                .andExpect(jsonPath("$.message").value("Address service unavailable"));
     }
 
     @Test

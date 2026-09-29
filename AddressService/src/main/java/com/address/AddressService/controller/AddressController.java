@@ -1,16 +1,27 @@
 package com.address.AddressService.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 
 import com.address.AddressService.model.dto.AddressRequestDTO;
 import com.address.AddressService.model.dto.AddressResponseDTO;
 import com.address.AddressService.model.enums.AddressType;
 import com.address.AddressService.service.AddressService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -18,8 +29,7 @@ import java.util.List;
 @RequestMapping("addresses")
 public class AddressController {
 
-    @Autowired
-    private AddressService addressService;
+    @Autowired private AddressService addressService;
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PostMapping
@@ -35,8 +45,10 @@ public class AddressController {
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<AddressResponseDTO>> getAddressesByEmployeeId(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(addressService.getAddressesByEmployeeId(employeeId));
+    public ResponseEntity<Page<AddressResponseDTO>> getAddressesByEmployeeId(
+            @PathVariable Long employeeId,
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(addressService.getAddressesByEmployeeId(employeeId, pageable));
     }
 
     @GetMapping("/employee/{employeeId}/type/{type}")

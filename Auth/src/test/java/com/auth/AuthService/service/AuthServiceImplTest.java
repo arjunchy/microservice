@@ -25,6 +25,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,66 +51,48 @@ class AuthServiceImplTest {
     @InjectMocks
     private AuthServiceImpl authService;
 
+    // ---------------- register ----------------
+
     @Test
-    void registerCreatesUserAndReturnsToken() {
+    void registerCreatesUserWithUserRoleAndNoToken() {
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(passwordEncoder.encode("secret123")).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(1L);
+            user.onCreate();
             return user;
         });
-        when(userDetailsService.loadUserByUsername("alice")).thenReturn(userDetails);
-        when(jwtService.generateToken(userDetails)).thenReturn("jwt-token");
-        when(jwtService.getExpiration()).thenReturn(60000L);
 
-        AuthResponse response =
-                authService.register(new RegisterRequest("alice", "secret123", "alice@example.com", Role.USER));
+        UserResponse response =
+                authService.register(new RegisterRequest("alice", "secret123", "alice@example.com"));
 
-        assertThat(response.token()).isEqualTo("jwt-token");
+        assertThat(response.id()).isEqualTo(1L);
         assertThat(response.username()).isEqualTo("alice");
+        assertThat(response.email()).isEqualTo("alice@example.com");
         assertThat(response.role()).isEqualTo(Role.USER);
-        assertThat(response.expiresIn()).isEqualTo(60000L);
+        assertThat(response.createdAt()).isNotNull();
+        verify(userRepository).save(argThat(user -> user.getRole() == Role.USER));
+        verify(userDetailsService, never()).loadUserByUsername(any());
+        verify(jwtService, never()).generateToken(any(UserDetails.class));
     }
 
     @Test
-    void registerDefaultsRoleToUserWhenBlank() {
+    void registerAlwaysAssignsUserRoleEvenWhenRequestHasNoRole() {
         when(userRepository.existsByUsername("bob")).thenReturn(false);
-        when(userRepository.existsByEmail("bob@example.com")).thenReturn(false);
         when(passwordEncoder.encode("secret123")).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(2L);
+            user.onCreate();
             return user;
         });
-        when(userDetailsService.loadUserByUsername("bob")).thenReturn(userDetails);
-        when(jwtService.generateToken(userDetails)).thenReturn("jwt-token");
-        when(jwtService.getExpiration()).thenReturn(60000L);
 
-        AuthResponse response =
-                authService.register(new RegisterRequest("bob", "secret123", "bob@example.com", null));
+        UserResponse response =
+                authService.register(new RegisterRequest("bob", "secret123", "bob@example.com"));
 
         assertThat(response.role()).isEqualTo(Role.USER);
-    }
-
-    @Test
-    void registerKeepsAdminRoleWhenProvided() {
-        when(userRepository.existsByUsername("root")).thenReturn(false);
-        when(userRepository.existsByEmail("root@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("secret123")).thenReturn("encoded");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User user = invocation.getArgument(0);
-            user.setId(3L);
-            return user;
-        });
-        when(userDetailsService.loadUserByUsername("root")).thenReturn(userDetails);
-        when(jwtService.generateToken(userDetails)).thenReturn("jwt-token");
-        when(jwtService.getExpiration()).thenReturn(60000L);
-
-        AuthResponse response =
-                authService.register(new RegisterRequest("root", "secret123", "root@example.com", Role.ADMIN));
-
-        assertThat(response.role()).isEqualTo(Role.ADMIN);
+        verify(userRepository).save(argThat(user -> user.getRole() == Role.USER));
     }
 
     @Test
@@ -115,9 +100,10 @@ class AuthServiceImplTest {
         when(userRepository.existsByUsername("alice")).thenReturn(true);
 
         assertThatThrownBy(() ->
-                authService.register(new RegisterRequest("alice", "secret123", "alice@example.com", null)))
+                authService.register(new RegisterRequest("alice", "secret123", "alice@example.com")))
                 .isInstanceOf(DuplicateUserException.class)
                 .hasMessage("Username already exists");
+        verify(userRepository, never()).save(any());
     }
 
     @Test
@@ -126,10 +112,13 @@ class AuthServiceImplTest {
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(true);
 
         assertThatThrownBy(() ->
-                authService.register(new RegisterRequest("alice", "secret123", "alice@example.com", null)))
+                authService.register(new RegisterRequest("alice", "secret123", "alice@example.com")))
                 .isInstanceOf(DuplicateUserException.class)
                 .hasMessage("Email already in use");
+        verify(userRepository, never()).save(any());
     }
+
+    // ---------------- login ----------------
 
     @Test
     void loginSucceedsWithValidCredentials() {
@@ -149,6 +138,7 @@ class AuthServiceImplTest {
         assertThat(response.token()).isEqualTo("jwt-token");
         assertThat(response.username()).isEqualTo("alice");
         assertThat(response.role()).isEqualTo(Role.USER);
+        assertThat(response.expiresIn()).isEqualTo(60000L);
     }
 
     @Test
@@ -170,6 +160,8 @@ class AuthServiceImplTest {
                 .isInstanceOf(BadCredentialsException.class);
     }
 
+    // ---------------- getCurrentUser ----------------
+
     @Test
     void getCurrentUserReturnsUserInfo() {
         User user = new User();
@@ -181,6 +173,7 @@ class AuthServiceImplTest {
 
         UserResponse response = authService.getCurrentUser("alice");
 
+        assertThat(response.id()).isEqualTo(1L);
         assertThat(response.username()).isEqualTo("alice");
         assertThat(response.email()).isEqualTo("alice@example.com");
         assertThat(response.role()).isEqualTo(Role.USER);

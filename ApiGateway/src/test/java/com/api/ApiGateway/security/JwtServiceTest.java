@@ -70,6 +70,19 @@ class JwtServiceTest {
     }
 
     @Test
+    void rejectsTokenSignedWithDifferentSecret() {
+        String token = Jwts.builder()
+                .subject("alice")
+                .claim("role", "USER")
+                .issuedAt(issuedAt)
+                .expiration(expirationTime)
+                .signWith(Keys.hmacShaKeyFor("a-completely-different-secret-key-for-hs256!".getBytes()))
+                .compact();
+
+        assertThat(jwtService.isValid(token)).isFalse();
+    }
+
+    @Test
     void returnsConfiguredExpiration() {
         assertThat(jwtService.getExpiration()).isEqualTo(expiration);
     }

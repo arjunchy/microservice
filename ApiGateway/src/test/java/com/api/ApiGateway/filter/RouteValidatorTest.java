@@ -58,4 +58,10 @@ class RouteValidatorTest {
         assertThat(routeValidator.isPublic("/auth/admin")).isFalse();
     }
 
+    @Test
+    void demoServicesNowRequireAuth() {
+        assertThat(routeValidator.isPublic("/demo/employee-cb")).isFalse();
+        assertThat(routeValidator.isPublic("/demo/address-cb")).isFalse();
+    }
+
 }

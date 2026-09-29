@@ -1,8 +1,9 @@
 package com.employee.EmployeeService.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import com.employee.EmployeeService.security.JwtAuthenticationFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -20,11 +21,8 @@ import java.util.Map;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Autowired private ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

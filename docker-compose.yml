@@ -5,7 +5,7 @@ services:
     container_name: mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
     ports:
       - "3307:3306"
     volumes:
@@ -27,6 +27,8 @@ services:
     restart: unless-stopped
     environment:
       SERVER_ADDRESS: 0.0.0.0
+      EUREKA_USER: ${EUREKA_USER:-eureka}
+      EUREKA_PASSWORD: ${EUREKA_PASSWORD:-eureka}
     ports:
       - "8761:8761"
     healthcheck:
@@ -46,13 +48,14 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0
       APP_DATASOURCE_EMPLOYEE_JDBC_URL: "jdbc:mysql://mysql:3306/employee_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
-      APP_DATASOURCE_EMPLOYEE_USERNAME: employee_user
-      APP_DATASOURCE_EMPLOYEE_PASSWORD: employee_pwd
+      APP_DATASOURCE_EMPLOYEE_USERNAME: ${EMPLOYEE_DB_USERNAME:-employee_user}
+      APP_DATASOURCE_EMPLOYEE_PASSWORD: ${EMPLOYEE_DB_PASSWORD:-employee_pwd}
       APP_DATASOURCE_ADDRESS_JDBC_URL: "jdbc:mysql://mysql:3306/address_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
-      APP_DATASOURCE_ADDRESS_USERNAME: employee_address_ro
-      APP_DATASOURCE_ADDRESS_PASSWORD: employee_ro_pwd
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      APP_DATASOURCE_ADDRESS_USERNAME: ${EMPLOYEE_ADDRESS_RO_USERNAME:-employee_address_ro}
+      APP_DATASOURCE_ADDRESS_PASSWORD: ${EMPLOYEE_ADDRESS_RO_PASSWORD:-employee_ro_pwd}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER:-eureka}:${EUREKA_PASSWORD:-eureka}@eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JWT_SECRET: ${JWT_SECRET:-a3f1b8d4c9e2f706b8a9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f}
     ports:
       - "8081:8081"
     depends_on:
@@ -79,10 +82,11 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/address_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
-      ADDRESS_DB_USERNAME: address_user
-      ADDRESS_DB_PASSWORD: address_pwd
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      ADDRESS_DB_USERNAME: ${ADDRESS_DB_USERNAME:-address_user}
+      ADDRESS_DB_PASSWORD: ${ADDRESS_DB_PASSWORD:-address_pwd}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER:-eureka}:${EUREKA_PASSWORD:-eureka}@eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JWT_SECRET: ${JWT_SECRET:-a3f1b8d4c9e2f706b8a9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f}
     ports:
       - "8082:8082"
     depends_on:
@@ -107,10 +111,11 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
-      AUTH_DB_USERNAME: auth_user
-      AUTH_DB_PASSWORD: auth_pwd
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      AUTH_DB_USERNAME: ${AUTH_DB_USERNAME:-auth_user}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_pwd}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER:-eureka}:${EUREKA_PASSWORD:-eureka}@eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JWT_SECRET: ${JWT_SECRET:-a3f1b8d4c9e2f706b8a9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f}
     ports:
       - "8084:8084"
     depends_on:
@@ -133,7 +138,8 @@ services:
     container_name: api-gateway
     restart: unless-stopped
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER:-eureka}:${EUREKA_PASSWORD:-eureka}@eureka-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:-a3f1b8d4c9e2f706b8a9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f}
     ports:
       - "9090:9090"
     depends_on:

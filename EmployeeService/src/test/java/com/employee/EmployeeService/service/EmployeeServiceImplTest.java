@@ -1,6 +1,7 @@
 package com.employee.EmployeeService.service;
 
 import com.employee.EmployeeService.client.AddressClient;
+import com.employee.EmployeeService.exception.AddressServiceUnavailableException;
 import com.employee.EmployeeService.exception.EmailAlreadyExistsException;
 import com.employee.EmployeeService.exception.EmployeeNotFoundException;
 import com.employee.EmployeeService.model.EmployeeStatus;
@@ -16,9 +17,14 @@ import com.employee.EmployeeService.repository.EmployeeRepository;
 import com.employee.EmployeeService.service.AddressReadService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -171,27 +177,46 @@ class EmployeeServiceImplTest {
     // ---------------- getAllEmployees ----------------
 
     @Test
-    void getAllEmployees_whenNoEmployees_shouldReturnEmptyList() {
-        List<Employee> empty = List.of();
+    void getAllEmployees_whenNoEmployees_shouldReturnEmptyPage() {
+        Page<Employee> empty = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
 
-        when(employeeRepository.findAll()).thenReturn(empty);
-        when(employeeMapper.toResponseList(empty)).thenReturn(List.of());
+        when(employeeRepository.findAll(any(Pageable.class))).thenReturn(empty);
 
-        assertThat(employeeService.getAllEmployees()).isEmpty();
+        Page<EmployeeResponseDTO> result = employeeService.getAllEmployees(PageRequest.of(0, 20));
+
+        assertThat(result).isEmpty();
+        assertThat(result.getContent()).isEmpty();
     }
 
     @Test
-    void getAllEmployees_whenEmployeesExist_shouldReturnAll() {
-        List<Employee> employees = List.of(entity(1L), entity(2L));
-        List<EmployeeResponseDTO> expected = List.of(response(1L), response(2L));
+    void getAllEmployees_whenEmployeesExist_shouldReturnPagedAll() {
+        Page<Employee> employees = new PageImpl<>(List.of(entity(1L), entity(2L)), PageRequest.of(0, 20), 2);
 
-        when(employeeRepository.findAll()).thenReturn(employees);
-        when(employeeMapper.toResponseList(employees)).thenReturn(expected);
+        when(employeeRepository.findAll(any(Pageable.class))).thenReturn(employees);
+        when(employeeMapper.toResponse(any(Employee.class))).thenAnswer(invocation -> {
+            Employee e = invocation.getArgument(0);
+            return e.getId() == 1L ? response(1L) : response(2L);
+        });
 
-        List<EmployeeResponseDTO> result = employeeService.getAllEmployees();
+        Page<EmployeeResponseDTO> result = employeeService.getAllEmployees(PageRequest.of(0, 20));
 
-        assertThat(result).hasSize(2);
-        assertThat(result).containsExactly(response(1L), response(2L));
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent()).containsExactly(response(1L), response(2L));
+        assertThat(result.getTotalElements()).isEqualTo(2);
+    }
+
+    @Test
+    void getAllEmployees_shouldForwardPageableToRepository() {
+        Page<Employee> empty = new PageImpl<>(List.of(), PageRequest.of(1, 5), 0);
+
+        when(employeeRepository.findAll(any(Pageable.class))).thenReturn(empty);
+
+        employeeService.getAllEmployees(PageRequest.of(1, 5));
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(employeeRepository).findAll(captor.capture());
+        assertThat(captor.getValue().getPageNumber()).isEqualTo(1);
+        assertThat(captor.getValue().getPageSize()).isEqualTo(5);
     }
 
     // ---------------- getEmployeesByDepartment ----------------
@@ -425,17 +450,17 @@ class EmployeeServiceImplTest {
     }
 
     @Test
-    void getEmployeeWithAddress_whenAddressServiceUnavailable_shouldReturnEmptyAddresses() {
+    void getEmployeeWithAddress_whenAddressServiceUnavailable_shouldThrow503() {
         Employee emp = entity(1L);
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(emp));
         doThrow(new RuntimeException("address-db-down"))
                 .when(addressReadService).findByEmployeeId(1L);
 
-        EmployeeWithAddressDTO result = employeeService.getEmployeeWithAddress(1L);
+        assertThatThrownBy(() -> employeeService.getEmployeeWithAddress(1L))
+                .isInstanceOf(AddressServiceUnavailableException.class)
+                .hasMessage("Address service unavailable");
 
-        assertThat(result.id()).isEqualTo(1L);
-        assertThat(result.addresses()).isEmpty();
         verify(addressReadService).findByEmployeeId(1L);
     }
 

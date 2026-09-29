@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class DuplicateUserException extends RuntimeException {
 
-    private static final HttpStatus status = HttpStatus.BAD_REQUEST;
+    private static final HttpStatus status = HttpStatus.CONFLICT;
 
     public DuplicateUserException(String message) {
         super(message);

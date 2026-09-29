@@ -8,6 +8,7 @@ import com.address.AddressService.service.AddressService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -196,7 +197,8 @@ class AddressControllerExceptionTest {
 
     @Test
     void getAddressesByEmployeeId_unexpectedException_returns500() throws Exception {
-        when(addressService.getAddressesByEmployeeId(anyLong())).thenThrow(new RuntimeException("boom"));
+        when(addressService.getAddressesByEmployeeId(anyLong(), any(Pageable.class)))
+                .thenThrow(new RuntimeException("boom"));
 
         mockMvc.perform(get("/addresses/employee/1"))
                 .andExpect(status().isInternalServerError())

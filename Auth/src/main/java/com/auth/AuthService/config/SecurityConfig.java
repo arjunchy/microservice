@@ -1,7 +1,8 @@
 package com.auth.AuthService.config;
 
-import com.auth.AuthService.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import com.auth.AuthService.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -14,13 +15,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 @Configuration
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Autowired private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -47,7 +48,7 @@ public class SecurityConfig {
     }
 
     private void writeJson(jakarta.servlet.http.HttpServletResponse response, HttpStatus status, String message)
-            throws java.io.IOException {
+            throws IOException {
         response.setStatus(status.value());
         response.setContentType("application/json");
         response.getWriter().write("{\"status\":" + status.value()

@@ -16,6 +16,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -233,23 +236,43 @@ class EmployeeControllerTest {
     // ---------------- GET /employee ----------------
 
     @Test
-    void getAllEmployees_withEmployees_shouldReturn200List() throws Exception {
-        when(employeeService.getAllEmployees()).thenReturn(List.of(response(1L), response(2L)));
+    void getAllEmployees_withEmployees_shouldReturn200Page() throws Exception {
+        when(employeeService.getAllEmployees(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response(1L), response(2L)),
+                        PageRequest.of(0, 20), 2));
 
         mockMvc.perform(get("/employee"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[1].id").value(2));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[1].id").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.number").value(0));
     }
 
     @Test
-    void getAllEmployees_noEmployees_shouldReturn200EmptyArray() throws Exception {
-        when(employeeService.getAllEmployees()).thenReturn(List.of());
+    void getAllEmployees_noEmployees_shouldReturn200EmptyPage() throws Exception {
+        when(employeeService.getAllEmployees(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
         mockMvc.perform(get("/employee"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void getAllEmployees_respectsPageRequestParams() throws Exception {
+        when(employeeService.getAllEmployees(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response(2L)),
+                        PageRequest.of(1, 1), 2));
+
+        mockMvc.perform(get("/employee").param("page", "1").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].id").value(2))
+                .andExpect(jsonPath("$.number").value(1));
     }
 
     // ---------------- GET /employee/department/{department} ----------------

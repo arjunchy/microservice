@@ -26,10 +26,8 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
 
     @Autowired
     private RouteValidator routeValidator;
-
     @Autowired
     private JwtService jwtService;
-
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -49,9 +47,11 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
             if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PREFIX)) {
                 String token = authorizationHeader.substring(BEARER_PREFIX.length());
                 if (jwtService.isValid(token)) {
+                    String role = jwtService.extractRole(token);
+                    String normalizedRole = (role == null || role.isBlank()) ? "USER" : role;
                     ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                             .header("X-User-Name", jwtService.extractUsername(token))
-                            .header("X-User-Role", jwtService.extractRole(token))
+                            .header("X-User-Role", normalizedRole)
                             .build();
                     return chain.filter(exchange.mutate().request(mutatedRequest).build());
                 }

@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS employee_db.employee (
   emp_name varchar(255) NOT NULL,
   status enum('ACTIVE','INACTIVE','ON_LEAVE','TERMINATED') DEFAULT NULL,
   updated_at datetime(6) DEFAULT NULL,
+  version bigint NOT NULL DEFAULT 0,
   PRIMARY KEY (id),
   UNIQUE KEY uk_employee_email (emp_email)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4;
@@ -59,8 +60,10 @@ CREATE TABLE IF NOT EXISTS address_db.address (
   created_at datetime(6) DEFAULT NULL,
   employee_id bigint NOT NULL,
   updated_at datetime(6) DEFAULT NULL,
+  version bigint NOT NULL DEFAULT 0,
   zip_code varchar(255) NOT NULL,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_address_employee_type (employee_id, address_type)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO address_db.address (id, employee_id, city, country, zip_code, address_type, created_at, updated_at) VALUES

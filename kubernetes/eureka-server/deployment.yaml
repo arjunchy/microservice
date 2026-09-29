@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eureka-server
+  namespace: microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eureka-server
+  template:
+    metadata:
+      labels:
+        app: eureka-server
+    spec:
+      containers:
+        - name: eureka-server
+          image: arjunchaudhary/eureka-server:latest
+          ports:
+            - containerPort: 8761
+          envFrom:
+            - configMapRef:
+                name: app-config
+          env:
+            - name: EUREKA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: eureka-secrets
+                  key: EUREKA_USER
+            - name: EUREKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: eureka-secrets
+                  key: EUREKA_PASSWORD
+          readinessProbe:
+            tcpSocket:
+              port: 8761
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8761
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

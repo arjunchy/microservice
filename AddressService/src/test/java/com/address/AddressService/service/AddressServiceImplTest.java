@@ -15,6 +15,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -118,23 +122,27 @@ class AddressServiceImplTest {
     // ---------- getAddressesByEmployeeId ----------
 
     @Test
-    void getAddressesByEmployeeId_returnsList() {
+    void getAddressesByEmployeeId_returnsPage() {
         Address a1 = buildAddress(1L, 100L, "Bengaluru", "India", "560001", AddressType.PERMANENT);
         Address a2 = buildAddress(2L, 100L, "Mumbai", "India", "400001", AddressType.TEMPORARY);
-        when(addressRepository.findByEmployeeId(100L)).thenReturn(List.of(a1, a2));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(addressRepository.findByEmployeeId(100L, pageable))
+                .thenReturn(new PageImpl<>(List.of(a1, a2), pageable, 2));
 
-        List<AddressResponseDTO> responses = addressService.getAddressesByEmployeeId(100L);
+        Page<AddressResponseDTO> response = addressService.getAddressesByEmployeeId(100L, pageable);
 
-        assertThat(responses).hasSize(2);
-        assertThat(responses).extracting(AddressResponseDTO::city)
+        assertThat(response.getTotalElements()).isEqualTo(2);
+        assertThat(response.getContent()).extracting(AddressResponseDTO::city)
                 .containsExactly("Bengaluru", "Mumbai");
     }
 
     @Test
-    void getAddressesByEmployeeId_returnsEmptyListWhenNone() {
-        when(addressRepository.findByEmployeeId(100L)).thenReturn(List.of());
+    void getAddressesByEmployeeId_returnsEmptyPageWhenNone() {
+        Pageable pageable = PageRequest.of(0, 20);
+        when(addressRepository.findByEmployeeId(100L, pageable))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        assertThat(addressService.getAddressesByEmployeeId(100L)).isEmpty();
+        assertThat(addressService.getAddressesByEmployeeId(100L, pageable).getContent()).isEmpty();
     }
 
     // ---------- getAddressesByEmployeeIdAndType ----------
@@ -237,7 +245,7 @@ class AddressServiceImplTest {
     // ---------- updateAddress ----------
 
     @Test
-    void updateAddress_updatesWhenTypeUnchanged() {
+    void updateAddress_skipsDuplicateCheckWhenKeyUnchanged() {
         Address existing = buildAddress(1L, 100L, "Bengaluru", "India", "560001", AddressType.PERMANENT);
         AddressRequestDTO dto = buildDto(100L, "Bengaluru", "India", "560001", AddressType.PERMANENT);
         when(addressRepository.findById(1L)).thenReturn(Optional.of(existing));
@@ -247,7 +255,7 @@ class AddressServiceImplTest {
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.city()).isEqualTo("Bengaluru");
-        verify(addressRepository, never()).existsByEmployeeIdAndAddressType(100L, AddressType.PERMANENT);
+        verify(addressRepository, never()).existsByEmployeeIdAndAddressTypeAndIdNot(any(), any(), any());
     }
 
     @Test
@@ -255,7 +263,7 @@ class AddressServiceImplTest {
         Address existing = buildAddress(1L, 100L, "Bengaluru", "India", "560001", AddressType.PERMANENT);
         AddressRequestDTO dto = buildDto(100L, "Mumbai", "India", "400001", AddressType.TEMPORARY);
         when(addressRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(addressRepository.existsByEmployeeIdAndAddressType(100L, AddressType.TEMPORARY))
+        when(addressRepository.existsByEmployeeIdAndAddressTypeAndIdNot(100L, AddressType.TEMPORARY, 1L))
                 .thenReturn(false);
         when(addressRepository.save(existing)).thenReturn(existing);
 
@@ -264,6 +272,21 @@ class AddressServiceImplTest {
         assertThat(response.city()).isEqualTo("Mumbai");
         assertThat(response.zipCode()).isEqualTo("400001");
         assertThat(response.addressType()).isEqualTo(AddressType.TEMPORARY);
+    }
+
+    @Test
+    void updateAddress_updatesWhenEmployeeChangedAndNotDuplicate() {
+        Address existing = buildAddress(1L, 100L, "Bengaluru", "India", "560001", AddressType.PERMANENT);
+        AddressRequestDTO dto = buildDto(200L, "Mumbai", "India", "400001", AddressType.PERMANENT);
+        when(addressRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(addressRepository.existsByEmployeeIdAndAddressTypeAndIdNot(200L, AddressType.PERMANENT, 1L))
+                .thenReturn(false);
+        when(addressRepository.save(existing)).thenReturn(existing);
+
+        AddressResponseDTO response = addressService.updateAddress(1L, dto);
+
+        assertThat(response.employeeId()).isEqualTo(200L);
+        assertThat(response.city()).isEqualTo("Mumbai");
     }
 
     @Test
@@ -281,7 +304,21 @@ class AddressServiceImplTest {
         Address existing = buildAddress(1L, 100L, "Bengaluru", "India", "560001", AddressType.PERMANENT);
         AddressRequestDTO dto = buildDto(100L, "Mumbai", "India", "400001", AddressType.TEMPORARY);
         when(addressRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(addressRepository.existsByEmployeeIdAndAddressType(100L, AddressType.TEMPORARY))
+        when(addressRepository.existsByEmployeeIdAndAddressTypeAndIdNot(100L, AddressType.TEMPORARY, 1L))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> addressService.updateAddress(1L, dto))
+                .isInstanceOf(DuplicateAddressException.class)
+                .hasMessage("Address Already Exists");
+        verify(addressRepository, never()).save(any(Address.class));
+    }
+
+    @Test
+    void updateAddress_throwsDuplicateWhenEmployeeChangedToTaken() {
+        Address existing = buildAddress(1L, 100L, "Bengaluru", "India", "560001", AddressType.PERMANENT);
+        AddressRequestDTO dto = buildDto(200L, "Mumbai", "India", "400001", AddressType.PERMANENT);
+        when(addressRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(addressRepository.existsByEmployeeIdAndAddressTypeAndIdNot(200L, AddressType.PERMANENT, 1L))
                 .thenReturn(true);
 
         assertThatThrownBy(() -> addressService.updateAddress(1L, dto))

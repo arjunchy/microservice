@@ -1,12 +1,16 @@
 package com.employee.EmployeeService.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import com.employee.EmployeeService.model.EmployeeStatus;
 import com.employee.EmployeeService.model.dto.EmployeeRequestDTO;
 import com.employee.EmployeeService.model.dto.EmployeeResponseDTO;
 import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
 import com.employee.EmployeeService.service.EmployeeService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,8 +22,7 @@ import java.util.List;
 @RequestMapping("/employee")
 public class EmployeeController {
 
-    @Autowired
-    private EmployeeService employeeService;
+    @Autowired private EmployeeService employeeService;
 
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PostMapping
@@ -33,6 +36,7 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getEmployeeById(id));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/email/{empEmail}")
     public ResponseEntity<EmployeeResponseDTO> getEmployeeByEmail(
             @PathVariable String empEmail) {
@@ -40,8 +44,9 @@ public class EmployeeController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EmployeeResponseDTO>> getAllEmployees() {
-        return ResponseEntity.ok(employeeService.getAllEmployees());
+    public ResponseEntity<Page<EmployeeResponseDTO>> getAllEmployees(
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(employeeService.getAllEmployees(pageable));
     }
 
     @GetMapping("/department/{department}")

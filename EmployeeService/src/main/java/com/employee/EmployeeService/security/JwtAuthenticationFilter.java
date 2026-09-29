@@ -1,10 +1,11 @@
 package com.employee.EmployeeService.security;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,8 +19,7 @@ import java.util.List;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtService jwtService;
+    @Autowired private JwtService jwtService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -30,7 +30,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String username = jwtService.extractUsername(token);
                 String role = jwtService.extractRole(token);
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    String authorityRole = role != null && role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                    String normalizedRole = (role == null || role.isBlank()) ? "USER" : role;
+                    String authorityRole = normalizedRole.startsWith("ROLE_") ? normalizedRole : "ROLE_" + normalizedRole;
                     SimpleGrantedAuthority authority = new SimpleGrantedAuthority(authorityRole);
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(username, null, List.of(authority));
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

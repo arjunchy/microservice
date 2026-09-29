@@ -4,6 +4,8 @@ import com.employee.EmployeeService.model.EmployeeStatus;
 import com.employee.EmployeeService.model.dto.EmployeeRequestDTO;
 import com.employee.EmployeeService.model.dto.EmployeeResponseDTO;
 import com.employee.EmployeeService.model.dto.EmployeeWithAddressDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -12,7 +14,7 @@ public interface EmployeeService {
 
     EmployeeResponseDTO getEmployeeById(Long id);
     EmployeeResponseDTO getEmployeeByEmail(String empEmail);
-    List<EmployeeResponseDTO> getAllEmployees();
+    Page<EmployeeResponseDTO> getAllEmployees(Pageable pageable);
     List<EmployeeResponseDTO> getEmployeesByDepartment(String department);
     List<EmployeeResponseDTO> getEmployeesByCompany(String companyName);
     List<EmployeeResponseDTO> getEmployeesByStatus(EmployeeStatus status);

@@ -1,9 +1,11 @@
 package com.auth.AuthService.controller;
 
 import com.auth.AuthService.config.SecurityConfig;
+import com.auth.AuthService.exception.DuplicateUserException;
 import com.auth.AuthService.model.Role;
 import com.auth.AuthService.model.dto.AuthResponse;
 import com.auth.AuthService.model.dto.RegisterRequest;
+import com.auth.AuthService.model.dto.UserResponse;
 import com.auth.AuthService.security.CustomUserDetailsService;
 import com.auth.AuthService.security.JwtService;
 import com.auth.AuthService.service.AuthService;
@@ -13,8 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,6 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SecurityConfig.class)
 class AuthControllerTest {
 
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 1, 1, 10, 0);
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -41,18 +49,46 @@ class AuthControllerTest {
     @MockitoBean
     private CustomUserDetailsService userDetailsService;
 
+    private UserResponse userResponse(long id, String username, Role role) {
+        return new UserResponse(id, username, username + "@example.com", role, NOW);
+    }
+
+    // ---------------- POST /auth/register ----------------
+
     @Test
-    void registerReturnsCreated() throws Exception {
+    void registerReturnsCreatedUser() throws Exception {
         when(authService.register(any(RegisterRequest.class)))
-.thenReturn(new AuthResponse("jwt-token", "alice", Role.USER, 86400000L));
+                .thenReturn(userResponse(1L, "alice", Role.USER));
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"alice\",\"password\":\"secret123\",\"email\":\"alice@example.com\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.username").value("alice"))
+                .andExpect(jsonPath("$.email").value("alice@example.com"))
                 .andExpect(jsonPath("$.role").value("USER"));
+
+        ArgumentCaptor<RegisterRequest> captor = ArgumentCaptor.forClass(RegisterRequest.class);
+        verify(authService).register(captor.capture());
+        assertThat(captor.getValue().username()).isEqualTo("alice");
+        assertThat(captor.getValue().email()).isEqualTo("alice@example.com");
+    }
+
+    @Test
+    void registerIgnoresRoleFieldInRequest() throws Exception {
+        when(authService.register(any(RegisterRequest.class)))
+                .thenReturn(userResponse(1L, "alice", Role.USER));
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"alice\",\"password\":\"secret123\",\"email\":\"alice@example.com\",\"role\":\"ADMIN\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("USER"));
+
+        ArgumentCaptor<RegisterRequest> captor = ArgumentCaptor.forClass(RegisterRequest.class);
+        verify(authService).register(captor.capture());
+        assertThat(captor.getValue().username()).isEqualTo("alice");
     }
 
     @Test
@@ -84,29 +120,33 @@ class AuthControllerTest {
     }
 
     @Test
-    void registerAcceptsLowercaseRole() throws Exception {
+    void registerDuplicateUsernameReturnsConflict() throws Exception {
         when(authService.register(any(RegisterRequest.class)))
-                .thenReturn(new AuthResponse("jwt-token", "bob", Role.ADMIN, 86400000L));
+                .thenThrow(new DuplicateUserException("Username already exists"));
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"bob\",\"password\":\"secret123\",\"role\":\"admin\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.role").value("ADMIN"));
-
-        ArgumentCaptor<RegisterRequest> captor = ArgumentCaptor.forClass(RegisterRequest.class);
-        verify(authService).register(captor.capture());
-        assertThat(captor.getValue().role()).isEqualTo(Role.ADMIN);
+                        .content("{\"username\":\"alice\",\"password\":\"secret123\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("Username already exists"));
     }
 
     @Test
-    void registerRejectsInvalidRole() throws Exception {
+    void registerDuplicateEmailReturnsConflict() throws Exception {
+        when(authService.register(any(RegisterRequest.class)))
+                .thenThrow(new DuplicateUserException("Email already in use"));
+
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"bob\",\"password\":\"secret123\",\"role\":\"SUPERUSER\"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Malformed or unreadable request body"));
+                        .content("{\"username\":\"bob\",\"password\":\"secret123\",\"email\":\"taken@example.com\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("Email already in use"));
     }
+
+    // ---------------- POST /auth/login ----------------
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -116,8 +156,31 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"alice\",\"password\":\"secret123\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt-token"));
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.role").value("USER"));
     }
+
+    @Test
+    void loginRejectsInvalidCredentials() throws Exception {
+        when(authService.login(any())).thenThrow(new BadCredentialsException("Bad credentials"));
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"alice\",\"password\":\"wrong\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Invalid username or password"));
+    }
+
+    @Test
+    void loginRejectsBlankUsername() throws Exception {
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"\",\"password\":\"secret123\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ---------------- GET /auth/me ----------------
 
     @Test
     void meWithoutTokenReturnsUnauthorized() throws Exception {
@@ -127,9 +190,40 @@ class AuthControllerTest {
     }
 
     @Test
+    void meWithUserTokenReturnsUser() throws Exception {
+        when(authService.getCurrentUser("alice")).thenReturn(userResponse(1L, "alice", Role.USER));
+
+        mockMvc.perform(get("/auth/me").with(org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.user("alice").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("alice"))
+                .andExpect(jsonPath("$.role").value("USER"));
+    }
+
+    // ---------------- GET /auth/admin ----------------
+
+    @Test
     void adminWithoutTokenReturnsUnauthorized() throws Exception {
         mockMvc.perform(get("/auth/admin"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminWithUserRoleReturnsForbidden() throws Exception {
+        mockMvc.perform(get("/auth/admin")
+                        .with(org.springframework.security.test.web.servlet.request
+                                .SecurityMockMvcRequestPostProcessors.user("alice").roles("USER")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"));
+    }
+
+    @Test
+    void adminWithAdminRoleReturnsOk() throws Exception {
+        mockMvc.perform(get("/auth/admin")
+                        .with(org.springframework.security.test.web.servlet.request
+                                .SecurityMockMvcRequestPostProcessors.user("root").roles("ADMIN")))
+                .andExpect(status().isOk());
     }
 
 }

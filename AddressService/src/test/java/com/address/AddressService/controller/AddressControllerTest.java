@@ -10,6 +10,9 @@ import com.address.AddressService.service.AddressService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -19,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -133,26 +137,29 @@ class AddressControllerTest {
     // ---------- GET /addresses/employee/{employeeId} ----------
 
     @Test
-    void getAddressesByEmployeeId_returnsList() throws Exception {
-        List<AddressResponseDTO> responses = List.of(
+    void getAddressesByEmployeeId_returnsPage() throws Exception {
+        Page<AddressResponseDTO> page = new PageImpl<>(List.of(
                 buildResponse(1L, 100L, "Bengaluru", "India", "560001", AddressType.PERMANENT),
-                buildResponse(2L, 100L, "Mumbai", "India", "400001", AddressType.TEMPORARY));
-        when(addressService.getAddressesByEmployeeId(100L)).thenReturn(responses);
+                buildResponse(2L, 100L, "Mumbai", "India", "400001", AddressType.TEMPORARY)));
+        when(addressService.getAddressesByEmployeeId(anyLong(), any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/addresses/employee/100"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].city").value("Bengaluru"))
-                .andExpect(jsonPath("$[1].city").value("Mumbai"));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].city").value("Bengaluru"))
+                .andExpect(jsonPath("$.content[1].city").value("Mumbai"))
+                .andExpect(jsonPath("$.totalElements").value(2));
     }
 
     @Test
-    void getAddressesByEmployeeId_returnsEmptyList() throws Exception {
-        when(addressService.getAddressesByEmployeeId(100L)).thenReturn(List.of());
+    void getAddressesByEmployeeId_returnsEmptyPage() throws Exception {
+        Page<AddressResponseDTO> page = new PageImpl<>(List.of());
+        when(addressService.getAddressesByEmployeeId(anyLong(), any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/addresses/employee/100"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.content.length()").value(0))
+                .andExpect(jsonPath("$.totalElements").value(0));
     }
 
     // ---------- GET /addresses/employee/{employeeId}/type/{type} ----------

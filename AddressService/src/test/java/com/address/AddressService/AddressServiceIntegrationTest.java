@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -135,6 +136,28 @@ class AddressServiceIntegrationTest {
     }
 
     @Test
+    void getAddressesByEmployeeId_returnsPagedResult() {
+        addressService.createAddress(dto(1L, "Bengaluru", "India", "560001", AddressType.PERMANENT));
+        addressService.createAddress(dto(1L, "Mumbai", "India", "400001", AddressType.TEMPORARY));
+
+        List<AddressResponseDTO> content =
+                addressService.getAddressesByEmployeeId(1L, PageRequest.of(0, 1)).getContent();
+
+        assertThat(content).hasSize(1);
+    }
+
+    @Test
+    void updateAddress_throwsDuplicateWhenEmployeeChangedToTaken() {
+        addressService.createAddress(dto(1L, "Bengaluru", "India", "560001", AddressType.PERMANENT));
+        AddressResponseDTO second = addressService.createAddress(
+                dto(2L, "Mumbai", "India", "400001", AddressType.PERMANENT));
+
+        assertThatThrownBy(() -> addressService.updateAddress(
+                second.id(), dto(1L, "Chennai", "India", "600001", AddressType.PERMANENT)))
+                .isInstanceOf(DuplicateAddressException.class);
+    }
+
+    @Test
     void deleteAddress_removesRow() {
         AddressResponseDTO created = addressService.createAddress(
                 dto(1L, "Bengaluru", "India", "560001", AddressType.PERMANENT));
@@ -158,7 +181,7 @@ class AddressServiceIntegrationTest {
 
         addressService.deleteAddressesByEmployeeId(1L);
 
-        assertThat(addressService.getAddressesByEmployeeId(1L)).isEmpty();
-        assertThat(addressService.getAddressesByEmployeeId(2L)).hasSize(1);
+        assertThat(addressService.getAddressesByEmployeeId(1L, PageRequest.of(0, 20)).getContent()).isEmpty();
+        assertThat(addressService.getAddressesByEmployeeId(2L, PageRequest.of(0, 20)).getContent()).hasSize(1);
     }
 }

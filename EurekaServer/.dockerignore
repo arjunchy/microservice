@@ -1,9 +1,34 @@
-target/
-!target/*.jar
-.git/
-.idea/
-*.iml
-*.log
+# Docker build context tune-down for the service Dockerfile.
+#
+# NOTE: `target/` is INTENTIONALLY NOT excluded - the Dockerfile does
+# `COPY ${JAR_FILE:-target/*.jar}` against the pre-built jar and the
+# GitHub Actions docker-build job drops the jar artifact into target/.
+# Keep `src/` too: it keeps the image reproducibly buildable if a
+# multi-stage Dockerfile is used later.
+
+# --- VCS / IDE -------------------------------------------------------
+.git
 .gitignore
+.gitattributes
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# --- Local / OS ------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Reports / analysis (not needed in image) ------------------------
 HELP.md
-TESTCASES.md
+IMPLEMENTATION_REPORT.md
+implementation.txt
+
+# --- Docker ------------------------------------------------
+.dockerignore
+Dockerfile.*.tmp

@@ -90,6 +90,38 @@ class AuthFilterTest {
                 .value(not(equalTo(401)));
     }
 
+    @Test
+    void allowsValidTokenWithoutRoleClaim() {
+        String token = Jwts.builder()
+                .subject("alice")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(Keys.hmacShaKeyFor(secret.getBytes()))
+                .compact();
+
+        webTestClient.get().uri("/employee/1")
+                .header("Authorization", "Bearer " + token)
+                .exchange()
+                .expectStatus()
+                .value(not(equalTo(401)));
+    }
+
+    @Test
+    void rejectsRequestSignedWithDifferentSecret() {
+        String token = Jwts.builder()
+                .subject("alice")
+                .claim("role", "USER")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(Keys.hmacShaKeyFor("another-secret-key-that-is-long-enough-for-hs256!".getBytes()))
+                .compact();
+
+        webTestClient.get().uri("/employee/1")
+                .header("Authorization", "Bearer " + token)
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
     private String mint(String username, String role, Date issuedAt, Date expirationDate) {
         return Jwts.builder()
                 .subject(username)

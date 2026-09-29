@@ -28,6 +28,11 @@ public class GlobalExceptionHandler {
         return build(ex.getMessage(), ex.getStatus());
     }
 
+    @ExceptionHandler(AddressServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleAddressServiceUnavailable(AddressServiceUnavailableException ex) {
+        return build(ex.getMessage(), ex.getStatus());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()

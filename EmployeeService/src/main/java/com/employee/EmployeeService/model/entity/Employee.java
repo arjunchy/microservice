@@ -3,17 +3,28 @@ package com.employee.EmployeeService.model.entity;
 import com.employee.EmployeeService.model.EmployeeStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString
 @Table(name = "employee")
 public class Employee {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @NotBlank
@@ -34,6 +45,9 @@ public class Employee {
 
     @Enumerated(EnumType.STRING)
     private EmployeeStatus status;
+
+    @Version
+    private Long version;
 
     private LocalDateTime createdAt;
 

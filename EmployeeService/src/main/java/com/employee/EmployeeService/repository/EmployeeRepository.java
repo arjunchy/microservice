@@ -4,6 +4,8 @@ import com.employee.EmployeeService.model.EmployeeStatus;
 import com.employee.EmployeeService.model.entity.Employee;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -21,4 +23,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Employee> findByEmpDepartmentAndStatus(String department, EmployeeStatus status);
 
     List<Employee> findByStatus(EmployeeStatus status);
+
+    Page<Employee> findByEmpDepartment(String department, Pageable pageable);
+
+    Page<Employee> findByCompanyName(String companyName, Pageable pageable);
+
+    Page<Employee> findByStatus(EmployeeStatus status, Pageable pageable);
 }

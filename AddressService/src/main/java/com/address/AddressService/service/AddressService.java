@@ -3,6 +3,8 @@ package com.address.AddressService.service;
 import com.address.AddressService.model.dto.AddressRequestDTO;
 import com.address.AddressService.model.dto.AddressResponseDTO;
 import com.address.AddressService.model.enums.AddressType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -10,7 +12,7 @@ public interface AddressService {
     AddressResponseDTO createAddress(AddressRequestDTO dto);
 
     AddressResponseDTO getAddressById(Long id);
-    List<AddressResponseDTO> getAddressesByEmployeeId(Long employeeId);
+    Page<AddressResponseDTO> getAddressesByEmployeeId(Long employeeId, Pageable pageable);
     List<AddressResponseDTO> getAddressesByEmployeeIdAndType(Long employeeId, AddressType type);
     List<AddressResponseDTO> getAddressesByCity(String city);
     List<AddressResponseDTO> getAddressesByCountry(String country);
