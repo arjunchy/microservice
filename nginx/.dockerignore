@@ -1,0 +1,32 @@
+# Docker build context tune-down for nginx/.
+#
+# NOTE: nginx runs from the stock `nginx:1.27-alpine` image; nginx.conf and
+# TLS certs are mounted at runtime (bind mount / K8s Secret), never COPY'd.
+# This file mostly protects the locally generated self-signed TLS private key
+# from ever leaking into an image or CI build context.
+
+# --- TLS secrets (local dev certs) ---
+certs/
+
+# --- VCS / IDE ---
+.git
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# --- Local / OS ---
+*.log
+logs/
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Reports / analysis (not needed in image) ---
+HELP.md
+implementation.txt
+IMPLEMENTATION_REPORT.md

@@ -140,8 +140,6 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://${EUREKA_USER:-eureka}:${EUREKA_PASSWORD:-eureka}@eureka-server:8761/eureka
       JWT_SECRET: ${JWT_SECRET:-a3f1b8d4c9e2f706b8a9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f}
-    ports:
-      - "9090:9090"
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -157,6 +155,29 @@ services:
       timeout: 5s
       retries: 15
       start_period: 70s
+    networks:
+      - microservices-net
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs/server.crt:/etc/nginx/certs/server.crt:ro
+      - ./nginx/certs/server.key:/etc/nginx/certs/server.key:ro
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t && curl -sfk https://127.0.0.1/actuator/health -o /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
     networks:
       - microservices-net
 
